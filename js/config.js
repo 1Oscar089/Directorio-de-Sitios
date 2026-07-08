@@ -13,7 +13,7 @@ window.SITE_CONFIG = {
   API_URL: "https://script.google.com/macros/s/AKfycbxT4VRgRVTTf0CUAF3egSyVAV6Yqk4pSHWc1SCywc65uEjqAkcKf4ro1yC1upyArDRULg/exec",
 
   // Contraseña para añadir sitios (debe coincidir con Code.gs).
-  //ADD_PASSWORD: "admin123",
+  ADD_PASSWORD: "admin123",
 
   // Categorías disponibles (se muestran en orden alfabético).
   CATEGORIES: [
