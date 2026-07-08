@@ -10,8 +10,6 @@
    ============================================================ */
 
 window.SITE_CONFIG = {
-  // URL del despliegue de Google Apps Script (Web App).
-  // Ejemplo: "https://script.google.com/macros/s/AKfyc.../exec"
   API_URL: "https://script.google.com/macros/s/AKfycbxT4VRgRVTTf0CUAF3egSyVAV6Yqk4pSHWc1SCywc65uEjqAkcKf4ro1yC1upyArDRULg/exec",
 
   // Contraseña para añadir sitios (debe coincidir con Code.gs).
