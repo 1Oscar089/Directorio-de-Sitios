@@ -27,6 +27,7 @@
     themeToggle: $("themeToggle"),
     // Add modal
     addModal: $("addModal"),
+    addModalTitle: $("addModalTitle"),
     addForm: $("addForm"),
     fName: $("f-name"),
     fDescription: $("f-description"),
@@ -47,6 +48,7 @@
 
   let allSites = [];
   let activeDetailSite = null;
+  let editingId = null;
 
   // ---------- Init ----------
   function init() {
@@ -102,7 +104,7 @@
     els.typeFilter.addEventListener("change", render);
     els.retryBtn.addEventListener("click", loadSites);
     els.themeToggle.addEventListener("click", toggleTheme);
-    els.addBtn.addEventListener("click", openAddModal);
+    els.addBtn.addEventListener("click", () => openAddModal());
 
     // Add form
     els.addForm.addEventListener("submit", handleSubmit);
@@ -110,27 +112,25 @@
       if (!els.formError.hidden) { els.formError.hidden = true; }
     });
 
-    // Modal close (delegación)
+    // Modal close — solo mediante botones explícitos (Cancelar / ×).
+    // NO se cierra al hacer clic fuera ni con Escape.
     document.addEventListener("click", (e) => {
       if (e.target.matches("[data-close]") || e.target.closest("[data-close]")) {
         closeAllModals();
       }
-      if (e.target.classList.contains("modal-overlay")) {
-        closeAllModals();
-      }
-    });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeAllModals();
     });
 
-    // Delegación para botón "ojo" (detalle en móvil)
+    // Delegación para botones de tarjeta: ver detalle / editar / eliminar
     els.container.addEventListener("click", (e) => {
-      const eyeBtn = e.target.closest(".eye-btn");
-      if (eyeBtn) {
-        const id = eyeBtn.getAttribute("data-id");
-        const site = allSites.find(s => String(s.id) === String(id));
-        if (site) openDetail(site);
-      }
+      const btn = e.target.closest("[data-action]");
+      if (!btn) return;
+      const id = btn.getAttribute("data-id");
+      const site = allSites.find(s => String(s.id) === String(id));
+      if (!site) return;
+      const action = btn.getAttribute("data-action");
+      if (action === "view") openDetail(site);
+      else if (action === "edit") openAddModal(site);
+      else if (action === "delete") handleDelete(site);
     });
   }
 
@@ -227,7 +227,19 @@
         <div class="card-top">
           <h3 class="card-name" title="${esc(s.name)}">${esc(s.name)}</h3>
           <div class="card-actions">
-            <button class="eye-btn" data-id="${esc(String(s.id))}" type="button" aria-label="Ver detalles de ${esc(s.name)}" title="Ver detalles">
+            <button class="card-action-btn edit-btn" data-action="edit" data-id="${esc(String(s.id))}" type="button" aria-label="Editar ${esc(s.name)}" title="Editar">
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
+            <button class="card-action-btn delete-btn" data-action="delete" data-id="${esc(String(s.id))}" type="button" aria-label="Eliminar ${esc(s.name)}" title="Eliminar">
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+            <button class="eye-btn" data-action="view" data-id="${esc(String(s.id))}" type="button" aria-label="Ver detalles de ${esc(s.name)}" title="Ver detalles">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                 <circle cx="12" cy="12" r="3"></circle>
@@ -273,15 +285,28 @@
     openModal(els.detailModal);
   }
 
-  // ---------- Add modal ----------
-  function openAddModal() {
+  // ---------- Add / Edit modal ----------
+  function openAddModal(site) {
     els.addForm.reset();
     els.formError.hidden = true;
     els.submitBtn.disabled = false;
-    els.submitBtn.querySelector(".btn-label").textContent = "Guardar sitio";
     els.submitBtn.querySelector(".spinner").hidden = true;
-    if (CONFIG.ADD_PASSWORD) {
-      els.fPassword.value = CONFIG.ADD_PASSWORD;
+    editingId = null;
+
+    if (site) {
+      // Modo edición: precargar datos (la contraseña NUNCA se precarga)
+      editingId = site.id;
+      els.addModalTitle.textContent = "Editar sitio";
+      els.fName.value = site.name || "";
+      els.fDescription.value = site.description || "";
+      els.fCategory.value = site.category || "";
+      els.fType.value = site.type || "";
+      els.fPrice.value = site.price || "";
+      els.fLink.value = site.link || "";
+      els.submitBtn.querySelector(".btn-label").textContent = "Guardar cambios";
+    } else {
+      els.addModalTitle.textContent = "Añadir nuevo sitio";
+      els.submitBtn.querySelector(".btn-label").textContent = "Guardar sitio";
     }
     openModal(els.addModal);
     setTimeout(() => els.fName.focus(), 50);
@@ -305,33 +330,77 @@
       showFormError("Completa los campos obligatorios (*).");
       return;
     }
+    if (!data.password) {
+      showFormError("Introduce la contraseña de administrador.");
+      return;
+    }
     if (!/^https?:\/\/.+/i.test(data.link)) {
       showFormError("El enlace debe comenzar con http:// o https://");
       return;
     }
 
+    const isEdit = editingId !== null;
+
+    // ---- Modo demo (sin backend) ----
     if (isDemo) {
-      const newSite = { id: Date.now(), timestamp: new Date().toISOString(), ...data };
-      delete newSite.password;
-      allSites.push(newSite);
-      closeAllModals();
-      render();
-      showToast("Sitio añadido (modo demo). Configura API_URL para guardarlo en tu Google Sheet.");
+      if (isEdit) {
+        const idx = allSites.findIndex(s => String(s.id) === String(editingId));
+        if (idx > -1) {
+          allSites[idx] = {
+            ...allSites[idx],
+            name: data.name,
+            description: data.description,
+            category: data.category,
+            type: data.type,
+            price: data.price,
+            link: data.link,
+          };
+        }
+        closeAllModals();
+        render();
+        showToast("Sitio actualizado (modo demo)");
+      } else {
+        allSites.push({
+          id: Date.now(),
+          timestamp: new Date().toISOString(),
+          name: data.name,
+          description: data.description,
+          category: data.category,
+          type: data.type,
+          price: data.price,
+          link: data.link,
+        });
+        closeAllModals();
+        render();
+        showToast("Sitio añadido (modo demo). Configura API_URL para guardarlo en tu Google Sheet.");
+      }
       return;
     }
 
-    // Enviar a Apps Script
+    // ---- Envío a Apps Script ----
+    const payload = {
+      action: isEdit ? "edit" : "add",
+      name: data.name,
+      description: data.description,
+      category: data.category,
+      type: data.type,
+      price: data.price,
+      link: data.link,
+      password: data.password,
+    };
+    if (isEdit) payload.id = editingId;
+
     setLoading(true);
     try {
       const res = await fetch(CONFIG.API_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.error || "Error al guardar");
       closeAllModals();
-      showToast("Sitio añadido correctamente");
+      showToast(isEdit ? "Sitio actualizado correctamente" : "Sitio añadido correctamente");
       await loadSites();
     } catch (err) {
       console.error(err);
@@ -341,9 +410,44 @@
     }
   }
 
+  // ---------- Eliminar sitio ----------
+  async function handleDelete(site) {
+    const ok = confirm('¿Eliminar "' + site.name + '"? Esta acción no se puede deshacer.');
+    if (!ok) return;
+
+    if (isDemo) {
+      allSites = allSites.filter(s => String(s.id) !== String(site.id));
+      render();
+      showToast("Sitio eliminado (modo demo)");
+      return;
+    }
+
+    const password = prompt('Introduce la contraseña de administrador para eliminar "' + site.name + '":');
+    if (password === null) return;
+    if (!password) { showToast("Contraseña requerida", true); return; }
+
+    try {
+      const res = await fetch(CONFIG.API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "delete", id: site.id, password }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || "Error al eliminar");
+      showToast("Sitio eliminado correctamente");
+      await loadSites();
+    } catch (err) {
+      console.error(err);
+      showToast("No se pudo eliminar: " + err.message, true);
+    }
+  }
+
   function setLoading(loading) {
     els.submitBtn.disabled = loading;
-    els.submitBtn.querySelector(".btn-label").textContent = loading ? "Guardando…" : "Guardar sitio";
+    const isEdit = editingId !== null;
+    els.submitBtn.querySelector(".btn-label").textContent = loading
+      ? "Guardando…"
+      : (isEdit ? "Guardar cambios" : "Guardar sitio");
     els.submitBtn.querySelector(".spinner").hidden = !loading;
   }
   function showFormError(msg) {
