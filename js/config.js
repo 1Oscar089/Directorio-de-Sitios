@@ -28,11 +28,11 @@ window.SITE_CONFIG = {
     "Juegos",
     "Marketing",
     "Noticias",
+    "Otros",
     "Productividad",
     "Redes Sociales",
     "Salud",
-    "Viajes",
-    "Otros"
+    "Viajes"
   ],
 
   // Tipos disponibles (se muestran en orden alfabético).
