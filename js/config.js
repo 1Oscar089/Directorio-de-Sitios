@@ -31,7 +31,8 @@ window.SITE_CONFIG = {
     "Productividad",
     "Redes Sociales",
     "Salud",
-    "Viajes"
+    "Viajes",
+    "Otros"
   ],
 
   // Tipos disponibles (se muestran en orden alfabético).
